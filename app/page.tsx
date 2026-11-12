@@ -9,14 +9,41 @@ const money=(n:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency
 function ema(values:number[],period:number){if(!values.length)return 0;const a=2/(period+1);return values.reduce((v,p,i)=>i===0?p:p*a+v*(1-a),0);}
 function rsi(values:number[]){if(values.length<15)return 50;let up=0,down=0;for(let i=values.length-14;i<values.length;i++){const d=values[i]-values[i-1];if(d>0)up+=d;else down-=d;}if(down===0)return 100;return 100-100/(1+up/14/(down/14));}
 export default function Home(){
- const [symbol,setSymbol]=useState("BTCUSDT"),[candles,setCandles]=useState<Candle[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[updated,setUpdated]=useState(0),[balance,setBalance]=useState(10000),[notes,setNotes]=useState<string[]>([]);
+ const [symbol,setSymbol]=useState("BTCUSDT"),[candles,setCandles]=useState<Candle[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[updated,setUpdated]=useState(0),[balance,setBalance]=useState(10000),[notes,setNotes]=useState<string[]>([]),[backtest,setBacktest]=useState<{end:number;ret:number;trades:number;wins:number;maxDrawdown:number;equity:number} | null>(null),[paperMode,setPaperMode]=useState(false),[paperStatus,setPaperStatus]=useState("Paper mode is stopped.");
  async function load(){setLoading(true);setError("");try{const r=await fetch("/api/market?symbol="+symbol,{cache:"no-store"});const j=await r.json();if(!r.ok)throw new Error(j.error||"Market data unavailable");setCandles(j.candles);setUpdated(j.fetchedAt);}catch(e){setError(e instanceof Error?e.message:"Unable to load public market data");setCandles([]);}finally{setLoading(false);}}
  useEffect(()=>{load();const id=setInterval(load,60000);return()=>clearInterval(id);},[symbol]);
  const closes=candles.map(c=>c.close),last=closes.at(-1)||0,prev=closes.at(-2)||last,change=prev?(last-prev)/prev*100:0;
  const fast=ema(closes.slice(-30),9),slow=ema(closes.slice(-50),21),momentum=rsi(closes);
  const chart=candles.map(c=>({time:new Date(c.time).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),price:c.close}));
  const high=Math.max(...candles.map(c=>c.high),0),low=Math.min(...candles.map(c=>c.low||Infinity),0);
- function logPractice(){if(!last)return;setNotes(n=>[`Reviewed ${symbol} at ${money(last)} · ${new Date().toLocaleTimeString()} · educational observation`,...n].slice(0,8));}
+ function runBacktest(){
+   if(candles.length<30){setError("At least 30 valid candles are required for this educational backtest.");return;}
+   let cash=10000, units=0, entry=0, trades=0,wins=0,peak=10000,maxDrawdown=0;
+   const fee=0.001,slippage=0.0005;
+   const values=candles.map(x=>x.close);
+   const calcEma=(arr:number[],p:number)=>{const a=2/(p+1);let v=arr[0];for(let i=1;i<arr.length;i++)v=arr[i]*a+v*(1-a);return v;};
+   for(let i=25;i<values.length;i++){
+    const previousFast=calcEma(values.slice(Math.max(0,i-25),i),9);
+    const previousSlow=calcEma(values.slice(Math.max(0,i-25),i),21);
+    const currentFast=calcEma(values.slice(Math.max(0,i-24),i+1),9);
+    const currentSlow=calcEma(values.slice(Math.max(0,i-24),i+1),21);
+    const price=values[i];
+    if(previousFast<=previousSlow && currentFast>currentSlow && units===0){
+      const allocation=cash*0.25; const fill=price*(1+slippage); units=(allocation*(1-fee))/fill; cash-=allocation; entry=fill;
+    } else if(previousFast>=previousSlow && currentFast<currentSlow && units>0){
+      const fill=price*(1-slippage); const proceeds=units*fill*(1-fee); if(fill>entry)wins++; cash+=proceeds; units=0; trades++;
+    }
+    const equity=cash+units*price; peak=Math.max(peak,equity); maxDrawdown=Math.max(maxDrawdown,(peak-equity)/peak*100);
+   }
+   const end=cash+units*values[values.length-1];
+   setBacktest({end,ret:(end/10000-1)*100,trades,wins,maxDrawdown,equity:end});
+   setPaperStatus("Backtest complete. Results are historical simulation only.");
+  }
+  function togglePaper(){
+   if(!paperMode){if(candles.length<30){setError("Load at least 30 candles before starting paper simulation.");return;}setPaperMode(true);setPaperStatus("Paper simulation enabled. No real orders are sent.");}
+   else {setPaperMode(false);setPaperStatus("Paper simulation stopped.");}
+  }
+  function logPractice(){if(!last)return;setNotes(n=>[`Reviewed ${symbol} at ${money(last)} · ${new Date().toLocaleTimeString()} · educational observation`,...n].slice(0,8));}
  const stats=useMemo(()=>({fast,slow,momentum}),[fast,slow,momentum]);
  return <main className="min-h-screen p-4 md:p-8 max-w-[1500px] mx-auto">
   <header className="flex flex-wrap items-center justify-between gap-4 mb-7"><div className="flex items-center gap-3"><div className="rounded-xl bg-cyan-400/10 p-3 text-cyan-300"><Activity/></div><div><div className="text-xl font-bold tracking-tight">Quant<span className="text-cyan-300">Lab</span></div><div className="text-xs muted">Market learning & paper simulation</div></div></div><div className="flex items-center gap-2 chip"><span className="h-2 w-2 rounded-full bg-emerald-400"/> PUBLIC DATA · SIMULATION ONLY</div></header>
@@ -35,6 +62,32 @@ export default function Home(){
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
    <section className="panel p-5"><div className="flex items-center gap-2 mb-2"><BookOpen className="text-cyan-300" size={18}/><h2 className="font-semibold">Practice journal</h2></div><p className="muted text-sm mb-4">Record observations while learning how market indicators behave.</p><button onClick={logPractice} disabled={!last} className="rounded-xl bg-cyan-400 text-slate-950 font-semibold px-4 py-2 text-sm disabled:opacity-40">Log current observation</button><div className="mt-4 space-y-2">{notes.length?notes.map((n,i)=><div key={i} className="rounded-lg bg-slate-900/70 p-3 text-xs muted">{n}</div>):<p className="muted text-xs">No observations recorded yet.</p>}</div></section>
    <section className="panel p-5"><div className="flex items-center gap-2 mb-2"><Layers3 className="text-cyan-300" size={18}/><h2 className="font-semibold">Simulation roadmap</h2></div><div className="space-y-3 text-sm">{["Historical backtesting with no-lookahead safeguards","Paper portfolio with simulated fees and slippage","Strategy comparison and risk/volatility lessons","Telegram notifications for learning milestones"].map((x,i)=><div key={x} className="flex gap-3"><span className="chip">{String(i+1).padStart(2,"0")}</span><span className="muted">{x}</span></div>)}</div><p className="text-xs muted mt-4">These modules are planned; they are not represented as completed functionality.</p></section>
+  </div>
+
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+   <section className="panel p-5">
+    <div className="flex items-center gap-2 mb-2"><FlaskConical className="text-cyan-300" size={18}/><h2 className="font-semibold">Historical backtest</h2></div>
+    <p className="muted text-sm mb-4">Educational EMA 9/21 crossover replay on the candles currently loaded. Uses a fixed simulated starting balance of $10,000, 0.10% fee and 0.05% slippage.</p>
+    <button onClick={runBacktest} disabled={loading||candles.length<30} className="rounded-xl bg-cyan-400 text-slate-950 font-semibold px-4 py-2 text-sm disabled:opacity-40">Run backtest</button>
+    {backtest&&<div className="grid grid-cols-2 gap-3 mt-4">
+     <div className="rounded-xl bg-slate-900/70 p-3"><div className="muted text-xs">Ending simulated equity</div><b>{money(backtest.end)}</b></div>
+     <div className="rounded-xl bg-slate-900/70 p-3"><div className="muted text-xs">Total return</div><b className={backtest.ret>=0?"positive":"negative"}>{backtest.ret.toFixed(2)}%</b></div>
+     <div className="rounded-xl bg-slate-900/70 p-3"><div className="muted text-xs">Closed trades</div><b>{backtest.trades}</b></div>
+     <div className="rounded-xl bg-slate-900/70 p-3"><div className="muted text-xs">Winning trades</div><b>{backtest.wins}{backtest.trades?" ("+(backtest.wins/backtest.trades*100).toFixed(1)+"%)":" (—)"}</b></div>
+     <div className="rounded-xl bg-slate-900/70 p-3 col-span-2"><div className="muted text-xs">Maximum observed drawdown</div><b>{backtest.maxDrawdown.toFixed(2)}%</b></div>
+    </div>}
+    <p className="muted text-xs mt-3">This simple example is not a validated strategy. It excludes funding, taxes, outages and market impact; a short candle history is not evidence of future performance.</p>
+   </section>
+   <section className="panel p-5">
+    <div className="flex items-center gap-2 mb-2"><Activity className="text-cyan-300" size={18}/><h2 className="font-semibold">Automated paper simulation</h2></div>
+    <p className="muted text-sm mb-4">Practice-mode control only. It never connects to an exchange account or places live orders.</p>
+    <div className="flex items-center gap-3 flex-wrap">
+     <button onClick={togglePaper} disabled={loading||candles.length<30} className={`rounded-xl font-semibold px-4 py-2 text-sm disabled:opacity-40 ${paperMode?"bg-rose-400 text-slate-950":"bg-cyan-400 text-slate-950"}`}>{paperMode?"Stop paper mode":"Start paper mode"}</button>
+     <span className="chip">{paperMode?"SIMULATION ON":"SIMULATION OFF"}</span>
+    </div>
+    <div className="rounded-xl bg-slate-900/70 p-3 mt-4 text-sm muted">{paperStatus}</div>
+    <div className="text-xs muted mt-3">The backtest button replays the loaded historical candles. Paper mode is a local practice state; it does not execute a continuous autonomous strategy yet.</div>
+   </section>
   </div>
   <footer className="text-center muted text-xs py-8">QuantLab · Educational market-data simulator · Not financial advice</footer>
  </main>;
