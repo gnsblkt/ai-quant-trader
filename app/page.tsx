@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Activity, ArrowDownToLine, BarChart3, BookOpen, BarChart3, ChevronDown, Database, FileUp, FlaskConical, History, Play, RefreshCw, ShieldCheck, SlidersHorizontal, Table2 } from "lucide-react";
+import { Activity, ArrowDownToLine, BarChart3, BookOpen, ChevronDown, Database, FileUp, FlaskConical, History, Play, RefreshCw, ShieldCheck, SlidersHorizontal, Table2 } from "lucide-react";
 import { Candle, Result, Settings, Strategy, runBacktest } from "../lib/backtest";
 
 const SYMBOLS=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","ADAUSDT","DOGEUSDT","AVAXUSDT","LINKUSDT","LTCUSDT","DOTUSDT"];
