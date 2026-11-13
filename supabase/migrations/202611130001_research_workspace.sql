@@ -22,6 +22,7 @@ create table if not exists public.research_sessions (
   title text not null default 'Untitled research session'
     check (char_length(title) between 1 and 160),
   current_observation integer not null default 0 check (current_observation >= 0),
+  playback_speed integer not null default 1 check (playback_speed in (1, 2, 4, 8)),
   chart_config jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
