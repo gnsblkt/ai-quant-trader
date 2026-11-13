@@ -26,7 +26,7 @@ const lessons=[
  {id:"bias",title:"Sampling and bias",body:"A chart is only a sample. Changing the start point or selection process can change the story. Avoid treating a visually striking segment as representative evidence."}
 ];
 export default function Home(){
- const [tab,setTab]=useState("explore"),[cursor,setCursor]=useState(119),[playing,setPlaying]=useState(false),[smooth,setSmooth]=useState(true),[notes,setNotes]=useState<Note[]>([]),[draft,setDraft]=useState(""),[search,setSearch]=useState(""),[mobile,setMobile]=useState(false),[lesson,setLesson]=useState("ohlc");
+ const [tab,setTab]=useState<"explore"|"replay"|"journal"|"learn">("explore"),[cursor,setCursor]=useState(119),[playing,setPlaying]=useState(false),[smooth,setSmooth]=useState(true),[notes,setNotes]=useState<Note[]>([]),[draft,setDraft]=useState(""),[search,setSearch]=useState(""),[mobile,setMobile]=useState(false),[lesson,setLesson]=useState("ohlc");
  useEffect(()=>{try{const v=localStorage.getItem("quantlab-learning-notes-v2");if(v)setNotes(JSON.parse(v));}catch{}},[]);
  useEffect(()=>{try{localStorage.setItem("quantlab-learning-notes-v2",JSON.stringify(notes));}catch{}},[notes]);
  useEffect(()=>{if(!playing)return;const id=window.setInterval(()=>setCursor(v=>{if(v>=239){setPlaying(false);return v;}return v+1;}),450);return()=>window.clearInterval(id);},[playing]);
