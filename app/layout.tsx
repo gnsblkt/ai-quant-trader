@@ -1,4 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
-export const metadata: Metadata = { title: "QuantLab — Paper Trading Simulator", description: "A market-data learning lab with simulated portfolio tracking." };
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <html lang="en"><body>{children}</body></html>; }
+export const metadata: Metadata = {
+  title: "QuantLab — Research Studio",
+  description: "A responsive historical market replay, paper research journal and quantitative learning workspace.",
+  applicationName: "QuantLab",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+};
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <html lang="en"><body>{children}</body></html>;
+}
