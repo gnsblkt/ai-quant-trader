@@ -1,5 +1,6 @@
 name: Production QA
 # Re-run the complete validation suite for every pull-request update.
+# Keep the preview and production build gates aligned.
 
 on:
   pull_request:
