@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Activity, ArrowDownToLine, BarChart3, BookOpen, ChevronDown, Database, FileUp, FlaskConical, History, Play, RefreshCw, ShieldCheck, SlidersHorizontal, Table2 } from "lucide-react";
@@ -37,9 +38,9 @@ export default function Home(){
  const priceData=useMemo(()=>candles.map(c=>({time:stamp(c.time),price:c.close})),[candles]);
  const equityData=useMemo(()=>result?.equityCurve.map(p=>({time:stamp(p.time),equity:p.equity,drawdown:p.drawdown}))||[],[result]);
  const field=(label:string,key:keyof Settings,min:number,max:number,step=1,suffix="")=><label className="block"><span className="muted text-xs">{label}</span><div className="flex items-center gap-2 mt-1"><input className="field w-full" type="number" min={min} max={max} step={step} value={Number(settings[key])} onChange={e=>change(key,Number(e.target.value))}/><span className="muted text-xs">{suffix}</span></div></label>;
- const tabs=[["overview","Overview",ChartNoAxesCombined],["trades","Trade log",Table2],["method","Methodology",BookOpen]] as const;
+ const tabs=[["overview","Overview",BarChart3],["trades","Trade log",Table2],["method","Methodology",BookOpen]] as const;
  return <main className="min-h-screen max-w-[1600px] mx-auto p-4 md:p-7">
-  <header className="flex flex-wrap justify-between items-center gap-4 mb-7"><div className="flex items-center gap-3"><div className="rounded-2xl bg-cyan-400/10 p-3 text-cyan-300"><Activity size={25}/></div><div><div className="text-2xl font-bold tracking-tight">Quant<span className="text-cyan-300">Lab</span> <span className="text-xs muted font-normal">RESEARCH TERMINAL</span></div><div className="muted text-xs mt-1">Historical strategy lab · Forex & digital assets · Simulation only</div></div></div><div className="chip flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-400"/> LOCAL BACKTEST ENGINE</div></header>
+  <header className="flex flex-wrap justify-between items-center gap-4 mb-7"><div className="flex items-center gap-3"><div className="rounded-2xl bg-cyan-400/10 p-3 text-cyan-300"><Activity size={25}/></div><div><div className="text-2xl font-bold tracking-tight">Quant<span className="text-cyan-300">Lab</span> <span className="text-xs muted font-normal">RESEARCH TERMINAL</span></div><div className="muted text-xs mt-1">Historical strategy lab · Forex & digital assets · Simulation only</div></div></div><Link href="/replay" className="btn">Multi-target replay</Link><div className="chip flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-400"/> LOCAL BACKTEST ENGINE</div></header>
   <div className="rounded-2xl border border-amber-400/30 bg-amber-400/5 p-3 mb-6 flex gap-3 text-sm"><ShieldCheck className="text-amber-300 shrink-0"/><div><b className="text-amber-200">Educational research environment.</b><span className="muted"> Results are simulations, not forecasts or financial advice. No live orders, leverage, exchange accounts or real-money execution.</span></div></div>
   <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-5">
    <div className="min-w-0 space-y-5">
