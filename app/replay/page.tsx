@@ -46,8 +46,9 @@ export default function ReplayPage() {
       if (!Array.isArray(data) || data.length < 3) throw new Error("Provider returned too few candles.");
       const mapped: Candle[] = data.map((candle) => ({ ...candle, time: candle.time * 1000, volume: 0 }));
       setCandles(mapped);
-      setStepIndex(Math.max(0, mapped.length - 20));
-      const latest = mapped[mapped.length - 1].close;
+      const initialIndex = Math.max(0, mapped.length - 20);
+      setStepIndex(initialIndex);
+      const latest = mapped[initialIndex].close;
       setEntryPrice(latest);
       setStopLoss(latest * 0.995);
       setTarget1(latest * 1.005);
@@ -160,8 +161,8 @@ export default function ReplayPage() {
             <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
               <h2 className="mb-3 font-semibold">Paper position setup</h2>
               <div className="mb-3 grid grid-cols-2 gap-2">
-                <button onClick={() => setSide("LONG")} className={`rounded-lg border px-3 py-2 text-sm ${side === "LONG" ? "border-emerald-400 bg-emerald-400/10 text-emerald-300" : "border-slate-700"}`}>Long</button>
-                <button onClick={() => setSide("SHORT")} className={`rounded-lg border px-3 py-2 text-sm ${side === "SHORT" ? "border-rose-400 bg-rose-400/10 text-rose-300" : "border-slate-700"}`}>Short</button>
+                <button onClick={() => { setSide("LONG"); setStopLoss(entryPrice * 0.995); setTarget1(entryPrice * 1.005); setTarget2(entryPrice * 1.01); }} className={`rounded-lg border px-3 py-2 text-sm ${side === "LONG" ? "border-emerald-400 bg-emerald-400/10 text-emerald-300" : "border-slate-700"}`}>Long</button>
+                <button onClick={() => { setSide("SHORT"); setStopLoss(entryPrice * 1.005); setTarget1(entryPrice * 0.995); setTarget2(entryPrice * 0.99); }} className={`rounded-lg border px-3 py-2 text-sm ${side === "SHORT" ? "border-rose-400 bg-rose-400/10 text-rose-300" : "border-slate-700"}`}>Short</button>
               </div>
               {[
                 ["Entry", entryPrice, setEntryPrice],
