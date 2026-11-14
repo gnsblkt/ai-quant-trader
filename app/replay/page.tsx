@@ -128,7 +128,7 @@ export default function ReplayPage() {
       <div className="mx-auto max-w-[1500px] space-y-5">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <Link href="/" className="mb-2 inline-flex items-center gap-2 text-xs text-cyan-300 hover:text-cyan-200"><ArrowLeft size={14} /> Back to QuantLab</Link>
+            <Link href="/" className="mb-2 inline-flex items-center gap-2 text-xs text-cyan-300 hover:text-cyan-200"><ArrowLeft size={14} /> Back to QuantReplay</Link>
             <h1 className="flex items-center gap-2 text-2xl font-bold"><Activity className="text-cyan-300" /> Multi-target Replay Studio</h1>
             <p className="mt-1 text-xs text-slate-400">EUR/USD hourly candles · draggable paper risk levels · deterministic candle-by-candle simulation</p>
           </div>
