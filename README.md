@@ -17,3 +17,17 @@ Open http://localhost:3000.
 
 ## Deploy
 Import this repository into Vercel. Framework preset: Next.js. No environment variables are required for the starter.
+
+
+## Multi-target Replay Studio
+Open `/replay` for the EURUSD 60-minute historical paper-replay workspace. It includes draggable stop/target overlays and deterministic partial-exit simulation.
+
+## Development checks
+```bash
+npm install
+npm run typecheck
+npm test
+npm run build
+```
+
+Configure `ALPHA_VANTAGE_API_KEY` as a server-side environment variable before using the Forex route. Alpha Vantage lists `FX_INTRADAY` as a premium function; the route reports a configuration/provider error rather than substituting synthetic data when unavailable. See [QuantReplay production notes](quantreplay/PRODUCTION-NOTES.md).
