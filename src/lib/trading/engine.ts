@@ -139,7 +139,7 @@ export function engineTick(
       position,
       executions,
       realizedPnL: executions.reduce((sum, item) => sum + item.netPnL, 0),
-      statusChanged: initialStatus !== position.status,
+      statusChanged: true,
       duplicateCandle: false,
     };
   }
