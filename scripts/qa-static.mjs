@@ -27,7 +27,7 @@ assert.match(html, /SIMULATION ONLY|No live orders/i, "Simulation-only boundary 
 
 for (const id of requiredIds) {
   assert.ok(
-    new RegExp(\`id=["']\${id}["']\`).test(html),
+    html.includes('id="' + id + '"') || html.includes("id='" + id + "'"),
     "Required UI element is missing: #" + id
   );
 }
