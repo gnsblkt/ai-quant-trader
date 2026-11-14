@@ -8,12 +8,12 @@ import { engineTick } from "../../src/lib/trading/engine";
 import type { ActivePosition, MarketCandle, TradeExecution, TradeTarget } from "../../src/types/trading";
 import type { Candle } from "../../lib/backtest";
 
-const fmt = (value: number, digits = 5) => Number.isFinite(value) ? value.toFixed(digits) : "—";
+const fmt = (value: number, digits = 2) => Number.isFinite(value) ? value.toFixed(digits) : "—";
 const cash = (value: number) => `${value < 0 ? "−" : ""}$${Math.abs(value).toFixed(2)}`;
 
-type ForexResponse = {
+type CryptoResponse = {
   data: MarketCandle[];
-  pair: string;
+  symbol: string;
   interval: string;
   timeZone: string;
   cached: boolean;
@@ -39,10 +39,10 @@ export default function ReplayPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/data/forex?pair=EURUSD&interval=60min", { cache: "no-store" });
+      const response = await fetch("/api/data/crypto?symbol=BTCUSDT&interval=1h&limit=500", { cache: "no-store" });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to load forex history.");
-      const data = (body as ForexResponse).data;
+      if (!response.ok) throw new Error(body.error || "Unable to load crypto history.");
+      const data = (body as CryptoResponse).data;
       if (!Array.isArray(data) || data.length < 3) throw new Error("Provider returned too few candles.");
       const mapped: Candle[] = data.map((candle) => ({ ...candle, time: candle.time * 1000, volume: 0 }));
       setCandles(mapped);
@@ -55,9 +55,9 @@ export default function ReplayPage() {
       setTarget2(latest * 1.01);
       setPosition(null);
       setExecutions([]);
-      setStatus(`${body.pair} · ${body.interval} · ${mapped.length} candles · ${body.timeZone}${body.stale ? " · cached fallback" : ""}`);
+      setStatus(`${body.symbol} · ${body.interval} · ${mapped.length} candles · UTC${body.stale ? " · cached fallback" : ""}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Forex data request failed.");
+      setError(caught instanceof Error ? caught.message : "Historical market-data request failed.");
     } finally {
       setLoading(false);
     }
@@ -91,12 +91,12 @@ export default function ReplayPage() {
     }
     const next: ActivePosition = {
       id: `paper-${Date.now()}`,
-      symbol: "EURUSD",
+      symbol: "BTCUSDT",
       type: side,
       entryPrice,
       entryTime: lastCandle.time,
-      initialSize: 10_000,
-      currentSize: 10_000,
+      initialSize: 0.01,
+      currentSize: 0.01,
       stopLoss,
       targets: [
         { id: "target-1", price: target1, sizePercentage: 50, executed: false, executedAtTime: null },
@@ -130,7 +130,7 @@ export default function ReplayPage() {
           <div>
             <Link href="/" className="mb-2 inline-flex items-center gap-2 text-xs text-cyan-300 hover:text-cyan-200"><ArrowLeft size={14} /> Back to QuantReplay</Link>
             <h1 className="flex items-center gap-2 text-2xl font-bold"><Activity className="text-cyan-300" /> Multi-target Replay Studio</h1>
-            <p className="mt-1 text-xs text-slate-400">EUR/USD hourly candles · draggable paper risk levels · deterministic candle-by-candle simulation</p>
+            <p className="mt-1 text-xs text-slate-400">BTC/USDT hourly candles · draggable paper risk levels · deterministic candle-by-candle simulation</p>
           </div>
           <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-50">
             {loading ? <LoaderCircle className="animate-spin" size={15} /> : <RefreshCw size={15} />} Refresh data
@@ -147,10 +147,10 @@ export default function ReplayPage() {
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
           <section className="min-w-0 space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-3 md:p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div><h2 className="font-semibold">EUR/USD · 60 minutes</h2><p className="mt-1 text-xs text-slate-400">{status}</p></div>
+              <div><h2 className="font-semibold">BTC/USDT · 1 hour</h2><p className="mt-1 text-xs text-slate-400">{status}</p></div>
               <span className="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-400">{visibleCandles.length} / {candles.length} bars revealed</span>
             </div>
-            {candles.length ? <TradingChart candles={visibleCandles} levels={position?.status === "CLOSED" ? [] : levels} onLevelChange={handleLevelChange} /> : <div className="grid h-[360px] place-items-center text-sm text-slate-400">{loading ? "Loading historical candles…" : "No forex data loaded."}</div>}
+            {candles.length ? <TradingChart candles={visibleCandles} levels={position?.status === "CLOSED" ? [] : levels} onLevelChange={handleLevelChange} pricePrecision={2} tickSize={0.01} /> : <div className="grid h-[360px] place-items-center text-sm text-slate-400">{loading ? "Loading historical candles…" : "No historical market data loaded."}</div>}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-3">
               <p className="text-xs text-slate-400">Replay cursor: {lastCandle ? new Date(lastCandle.time).toLocaleString() : "—"}</p>
               <button onClick={advance} disabled={!position || position.status === "CLOSED" || stepIndex >= candles.length - 1} className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-40"><ChevronRight size={15} /> Advance one candle</button>
@@ -184,7 +184,7 @@ export default function ReplayPage() {
               <h2 className="mb-2 font-semibold">Position status</h2>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-lg bg-slate-950 p-3"><span className="text-slate-500">Status</span><b className="mt-1 block">{position?.status ?? "Not started"}</b></div>
-                <div className="rounded-lg bg-slate-950 p-3"><span className="text-slate-500">Remaining size</span><b className="mt-1 block">{fmt(position?.currentSize ?? 0, 0)}</b></div>
+                <div className="rounded-lg bg-slate-950 p-3"><span className="text-slate-500">Remaining size</span><b className="mt-1 block">{fmt(position?.currentSize ?? 0, 4)}</b></div>
                 <div className="rounded-lg bg-slate-950 p-3"><span className="text-slate-500">Realized P/L</span><b className="mt-1 block">{cash(totalRealized)}</b></div>
                 <div className="rounded-lg bg-slate-950 p-3"><span className="text-slate-500">Executions</span><b className="mt-1 block">{executions.length}</b></div>
               </div>
@@ -193,7 +193,7 @@ export default function ReplayPage() {
 
             <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
               <h2 className="mb-2 font-semibold">Execution log</h2>
-              {executions.length ? <div className="max-h-64 space-y-2 overflow-auto">{executions.map((item) => <div key={item.id} className="rounded-lg bg-slate-950 p-2 text-xs"><div className="flex justify-between"><b>{item.reason.replace("_", " ")}</b><span>{cash(item.netPnL)}</span></div><p className="mt-1 text-slate-500">{fmt(item.executionPrice)} · size {fmt(item.size, 0)} · fees {cash(item.fees)}</p></div>)}</div> : <p className="text-xs text-slate-500">No simulated fills yet.</p>}
+              {executions.length ? <div className="max-h-64 space-y-2 overflow-auto">{executions.map((item) => <div key={item.id} className="rounded-lg bg-slate-950 p-2 text-xs"><div className="flex justify-between"><b>{item.reason.replace("_", " ")}</b><span>{cash(item.netPnL)}</span></div><p className="mt-1 text-slate-500">{fmt(item.executionPrice)} · size {fmt(item.size, 4)} BTC · fees {cash(item.fees)}</p></div>)}</div> : <p className="text-xs text-slate-500">No simulated fills yet.</p>}
             </section>
           </aside>
         </div>
