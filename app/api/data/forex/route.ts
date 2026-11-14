@@ -120,8 +120,7 @@ export async function GET(request: Request) {
   const pair = (params.get("pair") || "EURUSD").toUpperCase();
   const interval = params.get("interval") || "60min";
 
-  if (!/^[A-Z]{6}$/.test(pair)) return jsonError("Pair must contain exactly six currency letters.", 400);
-  if (!INTERVALS.has(interval)) return jsonError("Unsupported interval.", 400);
+  if (pair !== "EURUSD" || interval !== "60min" || !INTERVALS.has(interval)) return jsonError("This endpoint currently serves EURUSD at 60-minute resolution only.", 400);
 
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
   if (!apiKey) return jsonError("Forex data is not configured. Add ALPHA_VANTAGE_API_KEY to the server environment.", 503);
