@@ -114,7 +114,7 @@ export default function ReplayPage() {
     const nextIndex = stepIndex + 1;
     const source = candles[nextIndex];
     const bar: MarketCandle = { time: source.time / 1000, open: source.open, high: source.high, low: source.low, close: source.close };
-    const result = engineTick(position, bar, { feeRate: 0.00004, moveStopToBreakEven });
+    const result = engineTick(position, bar, { feeRate: 0.00004, moveToBreakEven });
     setPosition(result.position);
     setExecutions((current) => [...result.executions, ...current]);
     setStepIndex(nextIndex);
