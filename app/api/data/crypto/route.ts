@@ -37,7 +37,7 @@ function fail(message: string, status: number) {
   });
 }
 
-function parseKlines(payload: unknown): CryptoCandle[] {
+export function parseKlines(payload: unknown): CryptoCandle[] {
   if (!Array.isArray(payload)) throw new Error("Market-data provider returned an invalid response.");
   const candles = payload.map((row): CryptoCandle => {
     if (!Array.isArray(row) || row.length < 5) throw new Error("Market-data provider returned a malformed candle.");
