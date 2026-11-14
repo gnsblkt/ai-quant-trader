@@ -8,12 +8,17 @@ import { engineTick } from "../../src/lib/trading/engine";
 import type { ActivePosition, MarketCandle, TradeExecution, TradeTarget } from "../../src/types/trading";
 import type { Candle } from "../../lib/backtest";
 
-const fmt = (value: number, digits = 5) => Number.isFinite(value) ? value.toFixed(digits) : "—";
-const cash = (value: number) => `${value < 0 ? "−" : ""}$${Math.abs(value).toFixed(2)}`;
+const fmt = (value: number, digits = 2) => Number.isFinite(value) ? value.toFixed(digits) : "—";
+const cash = (value: number) => `${value < 0 ? "−" : ""}${Math.abs(value).toFixed(2)}`;
+const DEFAULT_SIZE: Record<string, number> = { BTCUSDT: 0.01, ETHUSDT: 0.1, BNBUSDT: 1, SOLUSDT: 5, XRPUSDT: 100 };
+const PRICE_PRECISION: Record<string, number> = { BTCUSDT: 2, ETHUSDT: 2, BNBUSDT: 2, SOLUSDT: 3, XRPUSDT: 4 };
+const PRICE_TICK: Record<string, number> = { BTCUSDT: 0.01, ETHUSDT: 0.01, BNBUSDT: 0.01, SOLUSDT: 0.001, XRPUSDT: 0.0001 };
+const SYMBOL_OPTIONS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"];
+const INTERVAL_OPTIONS = ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"];
 
-type ForexResponse = {
+type CryptoResponse = {
   data: MarketCandle[];
-  pair: string;
+  symbol: string;
   interval: string;
   timeZone: string;
   cached: boolean;
@@ -22,6 +27,8 @@ type ForexResponse = {
 
 export default function ReplayPage() {
   const [candles, setCandles] = useState<Candle[]>([]);
+  const [symbol, setSymbol] = useState("BTCUSDT");
+  const [interval, setTimeframe] = useState("1h");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("No dataset loaded");
@@ -39,10 +46,10 @@ export default function ReplayPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/data/forex?pair=EURUSD&interval=60min", { cache: "no-store" });
+      const response = await fetch(`/api/data/crypto?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}&limit=500`, { cache: "no-store" });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to load forex history.");
-      const data = (body as ForexResponse).data;
+      if (!response.ok) throw new Error(body.error || "Unable to load crypto history.");
+      const data = (body as CryptoResponse).data;
       if (!Array.isArray(data) || data.length < 3) throw new Error("Provider returned too few candles.");
       const mapped: Candle[] = data.map((candle) => ({ ...candle, time: candle.time * 1000, volume: 0 }));
       setCandles(mapped);
@@ -55,13 +62,13 @@ export default function ReplayPage() {
       setTarget2(latest * 1.01);
       setPosition(null);
       setExecutions([]);
-      setStatus(`${body.pair} · ${body.interval} · ${mapped.length} candles · ${body.timeZone}${body.stale ? " · cached fallback" : ""}`);
+      setStatus(`${body.symbol} · ${body.interval} · ${mapped.length} candles · UTC${body.stale ? " · cached fallback" : ""}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Forex data request failed.");
+      setError(caught instanceof Error ? caught.message : "Historical market-data request failed.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [symbol, interval]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -91,12 +98,12 @@ export default function ReplayPage() {
     }
     const next: ActivePosition = {
       id: `paper-${Date.now()}`,
-      symbol: "EURUSD",
+      symbol,
       type: side,
       entryPrice,
       entryTime: lastCandle.time,
-      initialSize: 10_000,
-      currentSize: 10_000,
+      initialSize: DEFAULT_SIZE[symbol] ?? 1,
+      currentSize: DEFAULT_SIZE[symbol] ?? 1,
       stopLoss,
       targets: [
         { id: "target-1", price: target1, sizePercentage: 50, executed: false, executedAtTime: null },
@@ -130,11 +137,23 @@ export default function ReplayPage() {
           <div>
             <Link href="/" className="mb-2 inline-flex items-center gap-2 text-xs text-cyan-300 hover:text-cyan-200"><ArrowLeft size={14} /> Back to QuantReplay</Link>
             <h1 className="flex items-center gap-2 text-2xl font-bold"><Activity className="text-cyan-300" /> Multi-target Replay Studio</h1>
-            <p className="mt-1 text-xs text-slate-400">EUR/USD hourly candles · draggable paper risk levels · deterministic candle-by-candle simulation</p>
+            <p className="mt-1 text-xs text-slate-400">{symbol.replace("USDT", "/USDT")} · {interval} candles · draggable paper risk levels · deterministic candle-by-candle simulation</p>
           </div>
-          <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-50">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-xs text-slate-400">Market
+              <select value={symbol} onChange={(event) => setSymbol(event.target.value)} className="ml-2 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-slate-100">
+                {SYMBOL_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+            <label className="text-xs text-slate-400">Timeframe
+              <select value={interval} onChange={(event) => setTimeframe(event.target.value)} className="ml-2 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-slate-100">
+                {INTERVAL_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+            <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-50">
             {loading ? <LoaderCircle className="animate-spin" size={15} /> : <RefreshCw size={15} />} Refresh data
-          </button>
+            </button>
+          </div>
         </header>
 
         <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-100">
@@ -147,10 +166,10 @@ export default function ReplayPage() {
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
           <section className="min-w-0 space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-3 md:p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div><h2 className="font-semibold">EUR/USD · 60 minutes</h2><p className="mt-1 text-xs text-slate-400">{status}</p></div>
+              <div><h2 className="font-semibold">{symbol.replace("USDT", "/USDT")} · {interval}</h2><p className="mt-1 text-xs text-slate-400">{status}</p></div>
               <span className="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-400">{visibleCandles.length} / {candles.length} bars revealed</span>
             </div>
-            {candles.length ? <TradingChart candles={visibleCandles} levels={position?.status === "CLOSED" ? [] : levels} onLevelChange={handleLevelChange} /> : <div className="grid h-[360px] place-items-center text-sm text-slate-400">{loading ? "Loading historical candles…" : "No forex data loaded."}</div>}
+            {candles.length ? <TradingChart candles={visibleCandles} levels={position?.status === "CLOSED" ? [] : levels} onLevelChange={handleLevelChange} pricePrecision={PRICE_PRECISION[symbol] ?? 2} tickSize={PRICE_TICK[symbol]} /> : <div className="grid h-[360px] place-items-center text-sm text-slate-400">{loading ? "Loading historical candles…" : "No historical market data loaded."}</div>}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-3">
               <p className="text-xs text-slate-400">Replay cursor: {lastCandle ? new Date(lastCandle.time).toLocaleString() : "—"}</p>
               <button onClick={advance} disabled={!position || position.status === "CLOSED" || stepIndex >= candles.length - 1} className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-40"><ChevronRight size={15} /> Advance one candle</button>
@@ -184,7 +203,7 @@ export default function ReplayPage() {
               <h2 className="mb-2 font-semibold">Position status</h2>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-lg bg-slate-950 p-3"><span className="text-slate-500">Status</span><b className="mt-1 block">{position?.status ?? "Not started"}</b></div>
-                <div className="rounded-lg bg-slate-950 p-3"><span className="text-slate-500">Remaining size</span><b className="mt-1 block">{fmt(position?.currentSize ?? 0, 0)}</b></div>
+                <div className="rounded-lg bg-slate-950 p-3"><span className="text-slate-500">Remaining size</span><b className="mt-1 block">{fmt(position?.currentSize ?? 0, 4)}</b></div>
                 <div className="rounded-lg bg-slate-950 p-3"><span className="text-slate-500">Realized P/L</span><b className="mt-1 block">{cash(totalRealized)}</b></div>
                 <div className="rounded-lg bg-slate-950 p-3"><span className="text-slate-500">Executions</span><b className="mt-1 block">{executions.length}</b></div>
               </div>
@@ -193,7 +212,7 @@ export default function ReplayPage() {
 
             <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
               <h2 className="mb-2 font-semibold">Execution log</h2>
-              {executions.length ? <div className="max-h-64 space-y-2 overflow-auto">{executions.map((item) => <div key={item.id} className="rounded-lg bg-slate-950 p-2 text-xs"><div className="flex justify-between"><b>{item.reason.replace("_", " ")}</b><span>{cash(item.netPnL)}</span></div><p className="mt-1 text-slate-500">{fmt(item.executionPrice)} · size {fmt(item.size, 0)} · fees {cash(item.fees)}</p></div>)}</div> : <p className="text-xs text-slate-500">No simulated fills yet.</p>}
+              {executions.length ? <div className="max-h-64 space-y-2 overflow-auto">{executions.map((item) => <div key={item.id} className="rounded-lg bg-slate-950 p-2 text-xs"><div className="flex justify-between"><b>{item.reason.replace("_", " ")}</b><span>{cash(item.netPnL)}</span></div><p className="mt-1 text-slate-500">{fmt(item.executionPrice)} · size {fmt(item.size, 4)} {item.symbol.replace("USDT", "")} · fees {cash(item.fees)}</p></div>)}</div> : <p className="text-xs text-slate-500">No simulated fills yet.</p>}
             </section>
           </aside>
         </div>
