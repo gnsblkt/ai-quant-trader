@@ -16,7 +16,7 @@ function assertFinitePositive(value: number, name: string) {
 function validate(position: ActivePosition, candle: MarketCandle, options: EngineOptions) {
   assertFinitePositive(position.entryPrice, "Entry price");
   assertFinitePositive(position.initialSize, "Initial size");
-  assertFinitePositive(position.currentSize, "Current size");
+  if (!Number.isFinite(position.currentSize) || position.currentSize < 0 || (position.status !== "CLOSED" && position.currentSize === 0)) throw new Error("Current size must be non-negative and positive while the position is open.");
   assertFinitePositive(position.stopLoss, "Stop loss");
   if (!position.id || !position.symbol) throw new Error("Position id and symbol are required.");
   if (!Number.isFinite(position.entryTime) || !Number.isFinite(candle.time)) throw new Error("Candle and entry timestamps must be finite.");
