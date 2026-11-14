@@ -28,7 +28,7 @@ type CryptoResponse = {
 export default function ReplayPage() {
   const [candles, setCandles] = useState<Candle[]>([]);
   const [symbol, setSymbol] = useState("BTCUSDT");
-  const [interval, setInterval] = useState("1h");
+  const [interval, setTimeframe] = useState("1h");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("No dataset loaded");
@@ -146,7 +146,7 @@ export default function ReplayPage() {
               </select>
             </label>
             <label className="text-xs text-slate-400">Timeframe
-              <select value={interval} onChange={(event) => setInterval(event.target.value)} className="ml-2 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-slate-100">
+              <select value={interval} onChange={(event) => setTimeframe(event.target.value)} className="ml-2 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-slate-100">
                 {INTERVAL_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
             </label>
