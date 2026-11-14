@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "qa:static": "node scripts/qa-static.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
