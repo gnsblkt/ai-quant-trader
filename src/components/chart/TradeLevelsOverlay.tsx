@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import type { RefObject } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, RefObject } from "react";
 import type { Coordinate, IChartApi, ISeriesApi } from "lightweight-charts";
 
 export type TradeLevel = {
@@ -101,14 +101,14 @@ export default function TradeLevelsOverlay({
     onChangeRef.current(id, snapped);
   };
 
-  const onPointerDown = (id: string) => (event: React.PointerEvent<HTMLDivElement>) => {
+  const onPointerDown = (id: string) => (event: ReactPointerEvent<HTMLDivElement>) => {
     if (disabled || event.button !== 0) return;
     dragging.current = id;
     event.currentTarget.setPointerCapture(event.pointerId);
     event.preventDefault();
   };
 
-  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!dragging.current) return;
     updateFromPointer(dragging.current, event.clientY);
   };
@@ -119,7 +119,7 @@ export default function TradeLevelsOverlay({
     scheduleSync();
   };
 
-  const onKeyDown = (id: string, current: number) => (event: React.KeyboardEvent<HTMLDivElement>) => {
+  const onKeyDown = (id: string, current: number) => (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (disabled || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
     event.preventDefault();
     const step = tickSize && tickSize > 0 ? tickSize : Math.pow(10, -pricePrecision);
